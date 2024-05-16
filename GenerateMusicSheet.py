@@ -8,6 +8,7 @@ import random
 import os
 import copy
 import matplotlib.pyplot as plt
+import time
 
 def convert():
     midiFile = "D:/Thesis/MusicSheetGenerator/generated.mid"
@@ -30,7 +31,7 @@ def getAudioDetails(audio_file):
     y, sr = librosa.load(audio_file)
 
     # Find the non-silent intervals
-    non_silent_intervals = librosa.effects.split(y, top_db=30)  # Adjust the top_db parameter as needed
+    non_silent_intervals = librosa.effects.split(y, top_db=30) 
 
     # Extract the non-silent portion of the audio
     trimmed_audio = []
@@ -61,58 +62,6 @@ def generate_population(num_notes, num_measures):
     population = geneticAlgorithm.generate_population(25, num_notes, num_measures)
     return population
 
-
-def genome_to_melody(genom, num_measures):
-
-    melody = {
-        "notes": [],
-        "velocity": [],
-        "beat": []
-    }
-
-    note_length_choice = [0.25, 0.50, 1, 2, 3, 4]
-
-    for note in genom:
-        melody["notes"] += [note]
-        melody["velocity"] += [127]
-        melody["beat"] += [random.choice(note_length_choice)]
-
-    
-    while True:
-        if int(sum(melody["beat"])) < 4 * num_measures:
-            index = random.randint(0, len(melody["beat"])-1)
-            note_length_added = random.choice(note_length_choice)
-            melody["beat"][index] += note_length_added
-            if melody["beat"][index] == 1.25 or melody["beat"][index] == 1.75:
-                melody["beat"][index] = 2
-            elif melody["beat"][index] == 2.25 or melody["beat"][index] == 2.5 or melody["beat"][index] == 2.75:
-                melody["beat"][index] = 3
-            elif melody["beat"][index] == 3.25 or melody["beat"][index] == 3.50 or melody["beat"][index] == 3.75:
-                melody["beat"][index] = 4
-            elif melody["beat"][index] > 4:
-                melody["beat"][index] = 6
-
-        elif int(sum(melody["beat"])) > 4 * num_measures:
-            index = random.randint(0, len(melody["beat"])-1)
-            note_length_added = random.choice(note_length_choice)
-            melody["beat"][index] -= note_length_added
-            if melody["beat"][index] <= 0:
-                melody["beat"][index] = 0.50
-            elif melody["beat"][index] == 1.25 or melody["beat"][index] == 1.75:
-                melody["beat"][index] = 1
-            elif melody["beat"][index] == 2.25 or melody["beat"][index] == 2.5 or melody["beat"][index] == 2.75:
-                melody["beat"][index] = 2
-            elif melody["beat"][index] == 3.25 or melody["beat"][index] == 3.50 or melody["beat"][index] == 3.75:
-                melody["beat"][index] = 3
-            elif melody["beat"][index] > 4:
-                melody["beat"][index] = 4
-        
-        elif int(sum(melody["beat"])) == 4 * num_measures:
-            print(melody["beat"])
-            input("Press Enter to continue...")
-            break
-
-    return melody
 
 def melody_to_midi(melody):
     mf = MIDIFile(1)
@@ -158,8 +107,11 @@ def main():
     
     population = generate_population(num_notes, num_measures)
     maxSimilarity = []
+    sorted_population_fitness = []
+    next_generation = []
     
     while True:
+        start_time = time.time()
         print("------------------------------------------------------")
         print("generation: " , generation)
         population_fitness = [(genom, fitnessFunction(genom, audio_file)) for genom in population]
@@ -180,7 +132,7 @@ def main():
 
         population = [e[0] for e in sorted_population_fitness] 
 
-        next_generation = []
+        
         next_generation.append(copy.deepcopy(population[0]))
         next_generation.append(copy.deepcopy(population[1]))
         parent1 = copy.deepcopy(population[0])
@@ -202,10 +154,12 @@ def main():
             next_generation.append(offspring_a)
             next_generation.append(offspring_b)
         
-        population = next_generation
+        population = copy.deepcopy(next_generation)
+        next_generation.clear()
         generation += 1
         melody_to_midi(population[0])
-        # input("Press Enter to continue...")
+        print("Execution time: ", time.time() - start_time)
+        input("Press Enter to continue...")
 
 
 if __name__ == '__main__':
